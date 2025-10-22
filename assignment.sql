@@ -156,6 +156,28 @@ GROUP BY
     loyalty_tiers;
 
 -- 11. Identify customers who spent more than ₦50,000 in total but have less than 200 loyalty points. Return customer_id, full_name, total_spend, total_points.
+WITH
+    Report AS (
+        SELECT
+            o.customer_id,
+            SUM(total_amount) AS Total,
+            SUM(points_earned) AS total_loyalty_points
+        FROM orders o
+            JOIN loyalty_points l ON l.customer_id = o.customer_id
+        GROUP BY
+            o.customer_id
+    )
+SELECT
+    c.customer_id,
+    full_name,
+    Total AS total_spend,
+    total_loyalty_points AS total_points
+FROM CUSTOMERS c
+    JOIN Report r ON c.customer_id = r.customer_id
+WHERE
+    Total > 50000
+    AND total_loyalty_points < 200
+ORDER BY Total DESC;
 
 -- 12. Flag customers as churn_risk if they have no orders in the last 90 days (relative to 2023-12-31) AND are in the Bronze tier. Return customer_id, full_name, last_order_date, total_points.
 
