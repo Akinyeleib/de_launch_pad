@@ -179,5 +179,35 @@ WHERE
     AND total_loyalty_points < 200
 ORDER BY Total DESC;
 
--- 12. Flag customers as churn_risk if they have no orders in the last 90 days (relative to 2023-12-31) AND are in the Bronze tier. Return customer_id, full_name, last_order_date, total_points.
-
+-- 12. Flag customers as churn_risk if they have no orders in the last 90 days (relative to 2023-12-31) AND are in the Bronze tier. Return customer_id, full_name, last_order_date, total_points
+WITH
+    Inactive_Customers AS (
+        SELECT customer_id
+        FROM customers except
+        SELECT customer_id
+        FROM orders
+        WHERE
+            ORDER_DATE >= DATE '2023-12-31' - INTERVAL '90 days'
+    ),
+    Bronze_Loyalty_Points_Filter AS (
+        SELECT
+            l.customer_id AS customer_id,
+            SUM(points_earned) AS total_points,
+            MAX(order_date) AS last_order_date
+        FROM
+            loyalty_points l
+            JOIN Orders ON Orders.customer_id = l.customer_id
+            JOIN Inactive_Customers ic ON l.customer_id = ic.customer_id
+        GROUP BY
+            l.customer_id
+        HAVING
+            SUM(points_earned) < 100
+    )
+SELECT
+    blpf.customer_id,
+    full_name,
+    total_points,
+    last_order_date
+FROM
+    Bronze_Loyalty_Points_Filter blpf
+    JOIN customers c ON blpf.customer_id = c.customer_id
